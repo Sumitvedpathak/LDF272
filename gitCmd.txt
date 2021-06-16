@@ -1,3 +1,4 @@
+------------------To Add a repository to Git---------------------------
 Initialize the local directory as a Git repository.
  $ git init
 
@@ -17,3 +18,8 @@ Check the Remote URL
 
 Push the changes in your local repository to GitHub if there is a remote branch called master (or main if that's what you're using)
  $ git push origin master
+
+ ------------------To Commit changes to Git---------------------------
+ git add .
+ git commit -m "<Commit message>"
+ git push origin master
