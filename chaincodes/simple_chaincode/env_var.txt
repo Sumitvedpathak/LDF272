@@ -1,3 +1,7 @@
+//TestNetwork Command
+./network.sh up createChannel -ca -s couchdb
+
+
 Below variables are for TestNetwork folder only
 
 export CORE_PEER_TLS_ENABLED=true
@@ -9,21 +13,14 @@ export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 
 //Creates the package
-peer lifecycle chaincode package simple_chaincode.tar.gz --path ../lfd272/chaincodes/simple_chaincode --lang node --label simple_chaincode_1.0
+peer lifecycle chaincode package ../lfd272/chaincodes/simple_chaincode/simple_chaincode.tar.gz --path ../lfd272/chaincodes/simple_chaincode --lang node --label simple_chaincode_1.0
 
-//Installs package
-peer lifecycle chaincode install simple_chaincode.tar.gz
+//Installs package in Org1
+peer lifecycle chaincode install ../lfd272/chaincodes/simple_chaincode/simple_chaincode.tar.gz
 
 //Copy package id from above command
-export PKG_ID=simple_chaincode_1.0:43bcb78fdfb1e7d9ea9741e4b727d791e5cc78bf185b052b6037f3d649a016fa
+export PKG_ID=simple_chaincode_1.0:40cad0fa09aad039fb4786f6343d3c90450dd89268459d10cfc62f69288b7031
 
-//Approvs
-peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
-
-//Check 
-peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name simple_chaincode --version 1.0 --sequence 1 --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json
-
-//Set env variables for Org 2 peer
 export CORE_PEER_TLS_ENABLED=true
 export CORE_PEER_LOCALMSPID="Org2MSP"
 export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
@@ -32,7 +29,19 @@ export CORE_PEER_ADDRESS=localhost:9051
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 
-export PKG_ID=simple_chaincode_1.0:43bcb78fdfb1e7d9ea9741e4b727d791e5cc78bf185b052b6037f3d649a016fa
+/Installs package in Org2
+peer lifecycle chaincode install ../lfd272/chaincodes/simple_chaincode/simple_chaincode.tar.gz
+
+export PKG_ID=simple_chaincode_1.0:40cad0fa09aad039fb4786f6343d3c90450dd89268459d10cfc62f69288b7031
+
+
+//Approvs
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
+
+//Check 
+peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name simple_chaincode --version 1.0 --sequence 1 --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json
+
+//Set env variables for Org 2 peer
 
 //Approve
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
@@ -49,4 +58,10 @@ peer lifecycle chaincode querycommitted --channelID mychannel --name simple_chai
 //Invoke
 peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n simple_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"put","Args":["test","value"]}' --tls
 
+peer chaincode query -C mychannel -n simple_chaincode-c'{"function":"get","Args":["k"]}'
 
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n simple_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"del","Args":["k"]}'
+
+
+Get Logs of any peer0
+docker logs dev-peer0.org1.example.com-simple_chaincode_1.0:40cad0fa09aad039fb4786f6343d3c90450dd89268459d10cfc62f69288b7031
