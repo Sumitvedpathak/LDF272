@@ -19,7 +19,14 @@ peer lifecycle chaincode package ../lfd272/chaincodes/reports_chaincode/reports_
 peer lifecycle chaincode install ../lfd272/chaincodes/reports_chaincode/reports_chaincode.tar.gz
 
 //Copy package id from above command
-export PKG_ID=reports_chaincode_1.0:7fb9622ae3cfbe754eae46919a925c54a2f9cf732f7a09d370b2d1dc14056401
+export PKG_ID=reports_chaincode_1.0:ae058030572c82dde67e2f6ab0e198cef0759a7abcff0e58af0e32e64040a131
+
+//Approvs
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name reports_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
+
+//Check 
+peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name reports_chaincode --version 1.0 --sequence 1 --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json
+
 
 export CORE_PEER_TLS_ENABLED=true
 export CORE_PEER_LOCALMSPID="Org2MSP"
@@ -32,14 +39,8 @@ export FABRIC_CFG_PATH=$PWD/../config/
 /Installs package in Org2
 peer lifecycle chaincode install ../lfd272/chaincodes/reports_chaincode/reports_chaincode.tar.gz
 
-export PKG_ID=reports_chaincode_1.0:7fb9622ae3cfbe754eae46919a925c54a2f9cf732f7a09d370b2d1dc14056401
+export PKG_ID=reports_chaincode_1.0:0a46e984d23d4d5bd9e4aa311d748cd5eab2d8439dd2e902a6fedb54faff6079
 
-
-//Approvs
-peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name reports_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
-
-//Check 
-peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name reports_chaincode --version 1.0 --sequence 1 --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json
 
 //Set env variables for Org 2 peer
 
@@ -55,13 +56,21 @@ peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride o
 //Verify Commit
 peer lifecycle chaincode querycommitted --channelID mychannel --name reports_chaincode --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 
-//Invoke
-peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n reports_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"put","Args":["test","value"]}' --tls
+//Instantiate
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n reports_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"init","Args":[]}'
 
-peer chaincode query -C mychannel -n reports_chaincode-c'{"function":"get","Args":["k"]}'
+//Invoke
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n reports_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"getAnnualReport","Args":["2019"]}'
+
+peer chaincode query -C mychannel -n reports_chaincode -c'{"function":"getAnnualRecord","Args":["2019"]}'
 
 peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n reports_chaincode --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"function":"del","Args":["k"]}'
+
+peer chaincode query -n reports_chaincode -C mychannel -c'{"function":"generateCustomReport", "Args":["{\"selector\":{\"price\": {\"$lt\": 0}}}"]}'
 
 
 Get Logs of any peer0
 docker logs dev-peer0.org1.example.com-reports_chaincode_1.0:40cad0fa09aad039fb4786f6343d3c90450dd89268459d10cfc62f69288b7031
+
+
+

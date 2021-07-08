@@ -19,7 +19,7 @@ peer lifecycle chaincode package ../lfd272/chaincodes/simple_chaincode/simple_ch
 peer lifecycle chaincode install ../lfd272/chaincodes/simple_chaincode/simple_chaincode.tar.gz
 
 //Copy package id from above command
-export PKG_ID=simple_chaincode_1.0:fb0608774f817cc2a168bd478e9ed65dd024c23b321df2c89098fa032da256e6
+export PKG_ID=simple_chaincode_1.0:90f6d38476074df2b3acba57ef8c10ba81c2e3ef10dadfd6ccb404c693198b2c
 
 //Approvs
 peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple_chaincode --version 1.0 --package-id $PKG_ID --sequence 1 --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --tls
