@@ -11,7 +11,7 @@ class SimpleContractC extends Contract {
         if(objType === ""){
             return key;
         }
-        return ctx.stub._createCompositeKey(objType,[key]);
+        return ctx.stub.createCompositeKey(objType,[key]);
     }
 
     async put(ctx, objType, key, value) {
@@ -44,7 +44,25 @@ class SimpleContractC extends Contract {
         return value.toString();
     }
 
-    async del(ctx, key) {
+    async getHistory(ctx, objType, key){
+        const compKey = this._createCompositeKey(ctx,objType,key);
+        const historyItertr = ctx.stub.getHistoryForKey(compKey);
+        let history = [];
+        for await (const res of historyItertr){
+            history.push({
+                txId: res.txId,
+                value: res.value.toString(),
+                isDelete:res.isDelete
+            });
+        }
+        return JSON.stringify({
+            objType: objType,
+            key:key,
+            values:history
+        });
+    }
+
+    async del(ctx, objType, key) {
         const compKey = this._createCompositeKey(ctx,objType,key);
         await ctx.stub.deleteState(compKey);
     }
@@ -61,6 +79,8 @@ class SimpleContractC extends Contract {
         }
         return JSON.stringify(results);
     }
+
+    
 
     // One way of getting range.  
 /*     async getByRange(ctx, frm, to) {
