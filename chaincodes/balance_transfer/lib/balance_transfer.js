@@ -13,13 +13,13 @@ class BalanceContract extends Contract{
     }
 
     async _accountExists(ctx, id){
-        const accountBytes = this._getCompositeKey(ctx, id);
+        const accountBytes = await this._getCompositeKey(ctx,id);
         return accountBytes && accountBytes.length > 0;
     }
 
     async _getAccount(ctx, id){
-        const accountBytes = this._getCompositeKey(ctx, id);
-        if(accountBytes || accountBytes.length == 0){
+        const accountBytes = await this._getCompositeKey(ctx,id);
+        if(!accountBytes || accountBytes.length === 0){
             throw new Error(`Account ${id} does not exists.`);
         }
         return JSON.parse(accountBytes.toString());
@@ -27,7 +27,10 @@ class BalanceContract extends Contract{
 
     async _putAccount(ctx, account){
         const compKey = ctx.stub.createCompositeKey(accountObjType,[account.id]);
-        await ctx.stub.putState(compKey, Buffer.from(JSON.stringify(account)));
+        console.log(compKey);
+        const buf = Buffer.from(JSON.stringify(account));
+        console.log(buf);
+        await ctx.stub.putState(compKey, buf);
     }
 
     async _getTxCreatorUID(ctx){
@@ -36,7 +39,6 @@ class BalanceContract extends Contract{
             mspid: ctx.clientIdentity.getMSPID(),
             id: ctx.clientIdentity.getID()
         });
-        console.log(obj);
         return obj;
     }
 
@@ -64,7 +66,7 @@ class BalanceContract extends Contract{
             throw new Error(`Account shall not have -ve balance`);
         }
         const account = await this._getAccount(ctx, id);
-        if(this._getTxCreatorUID(ctx) !== account.owner){
+        if(await this._getTxCreatorUID(ctx) !== account.owner){
             throw new Error(`Unauthorized access to ${id} account.`)
         }
         account.balance = newBal;
@@ -73,11 +75,11 @@ class BalanceContract extends Contract{
 
     async transfer(ctx, fromId, toId, balance){
         const bal = parseFloat(balance);
-        if(newBal < 0){
+        if(bal < 0){
             throw new Error(`Account shall not have -ve balance`);
         }
         const fromAct = await this._getAccount(ctx, fromId);
-        if(this._getTxCreatorUID(ctx) !== fromAct.owner){
+        if(await this._getTxCreatorUID(ctx) !== fromAct.owner){
             throw new Error(`Unauthorized access to ${id} account.`)
         }
         if(fromAct.balance < bal){
@@ -93,7 +95,7 @@ class BalanceContract extends Contract{
     }
 
     async listAccounts(ctx){
-        const owner = this._getTxCreatorUID(ctx);
+        const owner = await this._getTxCreatorUID(ctx);
 
         const acctsIterator = ctx.stub.getStateByPartialCompositeKey(accountObjType,[]);
 
