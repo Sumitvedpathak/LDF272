@@ -1,0 +1,47 @@
+//TestNetwork Command
+./network.sh up createChannel -ca -s couchdb
+
+./network.sh deployCC -ccn balance_transfer -ccv 1.0 -ccp ../lfd272/chaincodes/balance_transfer -ccl javascript
+
+./network.sh deployCC -ccn chaincode_interaction -ccv 1.0 -ccp ../lfd272/chaincodes/chaincode_interaction -ccl javascript
+
+//Org 1
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+
+//Set Orderer parameters for Invoke commands
+export orderer="-o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+
+export peer_org1="--peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+
+export peer_org2="--peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+
+peer chaincode invoke ${orderer} -C mychannel -n balance_transfer9 ${peer_org1} ${peer_org2} -c '{"function":"initAccount","Args":["A1","100"]}'
+peer chaincode query -C mychannel -n balance_transfer9 -c '{"function":"listAccounts", "Args":[]}'
+peer chaincode invoke ${orderer} -C mychannel -n balance_transfer9 ${peer_org1} ${peer_org2} -c '{"function":"setBalance","Args":["A1","150"]}'
+
+//Switch to user 1 in sane org 1
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp
+
+peer chaincode invoke ${orderer} -C mychannel -n balance_transfer8 ${peer_org1} ${peer_org2} -c '{"function":"initAccount","Args":["U1","100"]}'
+peer chaincode invoke ${orderer} -C mychannel -n balance_transfer8 ${peer_org1} ${peer_org2} -c '{"function":"transfer","Args":["U1","A1","100"]}'
+
+//Org 2
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org2MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+export CORE_PEER_ADDRESS=localhost:9051
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+
+Get Logs of any peer0
+docker logs dev-peer0.org1.example.com-reports_chaincode_1.0:40cad0fa09aad039fb4786f6343d3c90450dd89268459d10cfc62f69288b7031
+
+
+
