@@ -21,6 +21,10 @@ export peer_org1="--peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organ
 
 export peer_org2="--peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
 
+peer chaincode invoke ${orderer} -C mychannel -n interaction ${peer_org1} ${peer_org2} -c '{"Args":["interact","mychannel","balance_transfer","{"function":"initAccount","Args":["A1","100"]}"]}'
+
+peer chaincode invoke ${orderer} -C mychannel -n interaction ${peer_org1} ${peer_org2} -c '{"function":"interact","Args":["mychannel","balance_transfer","{"function":"initAccount","Args":["A1","100"]}"]}'
+
 peer chaincode invoke ${orderer} -C mychannel -n balance_transfer9 ${peer_org1} ${peer_org2} -c '{"function":"initAccount","Args":["A1","100"]}'
 peer chaincode query -C mychannel -n balance_transfer9 -c '{"function":"listAccounts", "Args":[]}'
 peer chaincode invoke ${orderer} -C mychannel -n balance_transfer9 ${peer_org1} ${peer_org2} -c '{"function":"setBalance","Args":["A1","150"]}'
