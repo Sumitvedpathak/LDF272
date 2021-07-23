@@ -1,0 +1,17 @@
+{
+  "name": "bt_app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "addToWallet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fabric-common": "^2.2.8",
+    "fabric-network": "^2.2.8",
+    "fs": "0.0.1-security",
+    "path": "^0.12.7"
+  }
+}
