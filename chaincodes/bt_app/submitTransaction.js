@@ -22,13 +22,38 @@ async function main(){
 
         let connectionOptions = {
             identity: identityLabel,
-            wallet : wallet,
+            wallet : wallets,
             discovery:{enabled:true, asLocalhost:true}
         };
 
+        console.log('Connect to Fabric Network');
         await gateway.connect(connectionProfile,connectionOptions);
+
+        console.log('Get Network for Channel');
+        const  network = await gateway.getNetwork('mychannel');
+
+        console.log('Extracting chaincode');
+        const contract = await network.getContract('balance_transfer');
+
+        const functionName = args[1];
+        const chaincodeArgs = args.slice(2);
+        
+        console.log('Submitting a transaction');
+        const response = await contract.submitTransaction(functionName,...chaincodeArgs);
+        if(`${response}` != ''){
+            console.log(`Response from ${functionName} - ${response}` );
+        }
     } catch(error) {
         console.log(`Error adding to Wallet. ${error}`);
         console.log(error.stack);
+    } finally{
+        gateway.disconnect();
     }
 }
+main().then(() => {
+    console.log('done');
+}).catch((e) => {
+    console.log(e);
+    console.log(e.stack);
+    process.exit(-1);
+});

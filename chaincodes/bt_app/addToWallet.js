@@ -35,7 +35,7 @@ async function main(){
                         certificate:cert,
                         privateKey:key,
                     },
-                    mspID: org.mspId,
+                    mspId: org.mspId,
                     type: 'X.509',
                 };
 
