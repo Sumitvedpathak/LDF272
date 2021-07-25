@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const {Wallets, Gateway} = require('fabric-network');
+const { ContractImpl } = require('fabric-network/lib/contract');
 
 const testNetworkRoot = path.resolve(require('os').homedir(),'go/src/github.com/hyperledger/fabric-samples/test-network');
 
