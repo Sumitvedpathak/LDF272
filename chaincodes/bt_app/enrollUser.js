@@ -10,17 +10,11 @@ const testNetworkRoot = path.resolve(require('os').homedir(),'go/src/github.com/
 async function main(){
     try{
         let args = process.argv.slice(2);
+        console.log(args);
         const identityLabel = args[0];
         const orgName = identityLabel.split('@')[1];
-        const orgNameWithoutDomain = orgName.split('.')[0];
-        console.log(`Arguments - ${args}, identityLabel - ${identityLabel}, orgName - ${orgName}, orgNameWithoutDomain - ${orgNameWithoutDomain}`);
 
-        let connectionProfile = JSON.parse(fs.readFileSync(path.join(testNetworkRoot,'organizations/peerOrganizations',orgName,`/connection-${orgNameWithoutDomain}.json`),'utf8'));
-
-        //Access Service
-        const ca = new FabricCAService(connectionProfile['certificateAuthorities'][`ca.${orgName}`].url);
-
-        //Enroll a Server Administrator
+        //Check if new user exists or not
         const wallet = await Wallets.newFileSystemWallet('./wallets');
         console.log('Getting identity of '+ identityLabel);
         let identity = await wallet.get(identityLabel);
@@ -29,21 +23,27 @@ async function main(){
             return ;
         }
 
+        const orgNameWithoutDomain = orgName.split('.')[0];
+        console.log(`Arguments - ${args}, identityLabel - ${identityLabel}, orgName - ${orgName}, orgNameWithoutDomain - ${orgNameWithoutDomain}`);
+        let connectionProfile = JSON.parse(fs.readFileSync(path.join(testNetworkRoot,'organizations/peerOrganizations',orgName,`/connection-${orgNameWithoutDomain}.json`),'utf8'));
+
+        //Access Service
+        const ca = new FabricCAService(connectionProfile['certificateAuthorities'][`ca.${orgName}`].url);
+
+        //Enroll a Server Administrator
         const enrollId = args[1];
         const enrollSecret = args[2];
-        console.log(`enrollId - ${enrollId}, enrollSecret - ${enrollSecret}`);
 
         let enrollRequest = {
-            enrollmentId:enrollId,
+            enrollmentID:enrollId,
             enrollmentSecret:enrollSecret
         };
-        console.log(`enrollRequest - ${JSON.stringify(enrollRequest)}`);
+
         const enrollment = await ca.enroll(enrollRequest);
 
-        console.log('orgNameWithoutDomain = '+orgNameWithoutDomain);
         const orgNameCapitalized = orgNameWithoutDomain.charAt(0).toUpperCase()+orgNameWithoutDomain.slice(1);
-        console.log('orgNameCapitalized = '+orgNameCapitalized);
 
+        //Add a newly create identity to wallet
         identity = {
             credentials:{
                 certificate:enrollment.certificate,
