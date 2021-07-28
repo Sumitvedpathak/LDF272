@@ -50,6 +50,10 @@ class BalanceContract extends Contract{
         if(await this._accountExists(ctx,id)){
             throw new Error(`Account ${id} already exists.`);
         }
+        console.log(ctx.clientIdentity)
+        if (!ctx.clientIdentity.assertAttributeValue('init','true')){
+            throw new Error(`Account initiate is not enabled for this user.`);
+        }
         const account = {
             id:id,
             // owner:"test",

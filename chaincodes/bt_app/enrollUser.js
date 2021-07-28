@@ -33,10 +33,15 @@ async function main(){
         //Enroll a Server Administrator
         const enrollId = args[1];
         const enrollSecret = args[2];
+        let enrollAttrs = [];
+        if(args.length >3 ){
+            enrollAttrs = JSON.parse(args[3]);
+        }
 
         let enrollRequest = {
             enrollmentID:enrollId,
-            enrollmentSecret:enrollSecret
+            enrollmentSecret:enrollSecret,
+            attr_reqs:enrollAttrs
         };
 
         const enrollment = await ca.enroll(enrollRequest);

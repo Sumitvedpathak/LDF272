@@ -35,11 +35,13 @@ async function main() {
         if(args.length > 2) {
             optional = JSON.parse(args[2]);
         }
+        
 
         let registerRequest = {
             enrollmentID: enrollmentID,
             enrollmentSecret: optional.secret || "",
-            role:'client'
+            role:'client',
+            attrs: optional.attrs || []
         };
 
         const secret = await ca.register(registerRequest,registrarUser);
