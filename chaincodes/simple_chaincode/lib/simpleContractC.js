@@ -80,7 +80,9 @@ class SimpleContractC extends Contract {
         return JSON.stringify(results);
     }
 
-    
+    async emitEvent(ctx,name, payload) {
+        ctx.stub.setEvent(name, Buffer.from(payload));
+    }
 
     // One way of getting range.  
 /*     async getByRange(ctx, frm, to) {
