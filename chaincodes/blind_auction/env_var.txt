@@ -31,3 +31,5 @@ node submitTransaction.js 'Admin@org1.example.com' offerForSale '{"args":["lot1"
 node submitTransaction.js 'Admin@org2.example.com' placeBid '{"args":["lot1"], "transient":{"price":"12"}}'
 node submitTransaction.js 'Admin@org3.example.com' placeBid '{"args":["lot1"], "transient":{"price":"14"}}'
 node submitTransaction.js 'Admin@org1.example.com' listBids '{"args":["lot1"]}'
+
+node submitTransaction.js 'Admin@org1.example.com' closeBidding '{"args":["lot1"]}'
