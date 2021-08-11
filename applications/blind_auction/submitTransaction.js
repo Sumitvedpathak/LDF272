@@ -2,13 +2,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const {Wallets, Gateway} = require('fabric-ca-client');
+const { Wallets, Gateway } = require('fabric-network');
 
-const testNetworkRoot = path.resolve(require('os').homedir(),'go/src/github.com/hyperledger/fabric-samples/test-network');
+const testNetworkRoot = path.resolve(require('os').homedir(), 'go/src/github.com/hyperledger/fabric-samples/test-network');
 
 async function main() {
     const gateway = new Gateway();
-
     const wallet = await Wallets.newFileSystemWallet('./wallets');
 
     try {
@@ -26,11 +25,9 @@ async function main() {
         const orgName = identityLabel.split('@')[1];
         const orgNameWithoutDomain = orgName.split('.')[0];
 
-        let connectionProfile = JSON.parse(fs.readFileSync(
-            path.join(testNetworkRoot, 
-                'organizations/peerOrganizations', 
-                orgName, 
-                `/connection-${orgNameWithoutDomain}.json`), 'utf8')
+        let connectionProfile = JSON.parse(
+            fs.readFileSync(path.join(testNetworkRoot, 'organizations/peerOrganizations', orgName, `/connection-${orgNameWithoutDomain}.json`), 
+            'utf8')
         );
 
         let connectionOptions = {
@@ -72,3 +69,5 @@ async function main() {
         gateway.disconnect();
     }
 }
+
+main();
