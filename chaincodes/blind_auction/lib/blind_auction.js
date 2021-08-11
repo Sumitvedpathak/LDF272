@@ -1,198 +1,186 @@
-'use strict'
+'use strict';
 
 const { Contract } = require('fabric-contract-api');
-const Helper = require('./helper');
 
-const assetObjType = "asset";
-const bidObjType = "bid";
+const lotObjType = 'Lot';
+const bidObjType = 'Bid';
 
-const LotStatus = Object.freeze({ Sale:1, Sold:2, Withdraw:3 });
-const participents = ['Org1MSP','Org2MSP','Org3MSP'];
+const LotStatus = Object.freeze({ForSale: 1, Sold: 2, Withdrawn: 3});
 
-class AuctionContract extends Contract {
+const auctionParticipants = ['Org1MSP', 'Org2MSP', 'Org3MSP'];
 
-    async listLotsForSale(ctx){
-        // return await new Helper()._getAssetWithStatus(ctx,assetObjType,LotStatus.Sale);
-        return this._getAssetWithStatus(ctx,assetObjType,LotStatus.Sale);
-    }
-
-    async listLotsForSold(ctx){
-        // return await new Helper()._getAssetWithStatus(ctx,assetObjType,LotStatus.Sold);
-        return this._getAssetWithStatus(ctx,assetObjType,LotStatus.Sold);
-    }
-
-    async listLotsForWithdraw(ctx){
-        // return await new Helper()._getAssetWithStatus(ctx,assetObjType,LotStatus.Withdraw);
-        return this._getAssetWithStatus(ctx,assetObjType,LotStatus.Withdraw);
-    }
-
-    async setOfferForAssetSale(ctx, assetId, assetDesc, minBidStr){
-        const minBid = parseFloat(minBidStr);
-        if(minBid < 0){
-            throw new Error("Minimum bid cannot be less than 0.");
+class BlindAuction extends Contract {
+    async offerForSale(ctx, lotID, lotDescription, minimalBidString) {
+        const minimalBid = parseFloat(minimalBidString);
+        if (minimalBid < 0) {
+            throw new Error(`minimal bid cannot be negative`);
         }
 
-        let asset = {
-            id: assetId,
-            description: assetDesc,
+        let lot = {
+            id: lotID,
+            description: lotDescription,
             seller: ctx.clientIdentity.getMSPID(),
-            startingBid: minBid,
-            status:LotStatus.Sale
+            minimalBid: minimalBid,
+            status: LotStatus.ForSale
         };
 
-        if(await this._assetExists(ctx,assetId,assetObjType)){
-            throw new Error(`Asset ${assetId} already exists. Please try another name.`);
+        if (await this._assetExists(ctx, lotObjType, lot.id)) {
+            throw new Error(`the lot ${lot.id} already exists`);
         }
 
-        await this._putAsset(ctx,asset,assetObjType);
+        await this._putAsset(ctx, lotObjType, lot);
     }
 
-    async placeBid(ctx, assetId) {
-        const asset = await this._getAsset(ctx, assetId,assetObjType);
+    async placeBid(ctx, lotID) {
+        const lot = await this._getAsset(ctx, lotObjType, lotID);
 
-        if(asset.status !== LotStatus.Sale) {
-            throw new Error(`Asset ${assetId} is not for sale.`);
+        if (lot.status !== LotStatus.ForSale) {
+            throw new Error(`bid cannot be placed for a lot that is not offered for sale`);
         }
 
-        if(asset.seller === ctx.clientIdentity.getMSPID()) {
-            throw new Error("Not Authorized! Seller cannot buy their own asset.");
+        if (lot.seller === ctx.clientIdentity.getMSPID()) {
+            throw new Error(`bid cannot be placed for your own lot`);
         }
 
-        const transient = await ctx.stub.getTransient();
+        const transient = ctx.stub.getTransient();
         let price = parseFloat(transient.get('price').toString());
-        if(price <= asset.minBid) {
-            throw new Error(`Not Accepted! Asset bid price is less than the minimum bidding price.`);
+        if (price < lot.minimalBid) {
+            throw new Error(`price cannot be less then the minimal bid`);
         }
 
         const bid = {
-            assetId : assetId,
-            bidder : ctx.clientIdentity.getMSPID(),
-            price : price 
+            id: lot.id,
+            bidder: ctx.clientIdentity.getMSPID(),
+            price: price
+        };
+
+        const collection = this._composeCollectionName(lot.seller, bid.bidder);
+        if (await this._assetExists(ctx, bidObjType, bid.id, collection)) {
+            throw new Error(`the bid ${bid.id} already exists`);
         }
 
-        const collection = this._composeCollectionName(asset.seller, bid.bidder);
-        if(await this._assetExists(ctx,bid.assetId,bidObjType,collection)) {
-            throw new Error(`Bid ${bid.assetId} already exists`);
-        }
-
-        await this._putAsset(ctx, bid,bidObjType,collection);
+        await this._putAsset(ctx, bidObjType, bid, collection);
     }
 
-    async closeBid(ctx, assetId){
-        const asset = await this._getAsset(ctx,assetId,assetObjType);
+    async closeBidding(ctx, lotID) {
+        const lot = await this._getAsset(ctx, lotObjType, lotID);
 
-        if(asset.status !== LotStatus.Sale) {
-            throw new Error('This is not offered for Sale.')
-        }
-
-        if(asset.seller != ctx.clientIdentity.getMSPID()) {
-            throw new Error('Not Authorized! Only asset owner can close the bids.')
-        }
-        
-        let bids = [];
-        for(const org of participents) {
-            if(org === asset.seller) {
-                continue;
-            }
-            const collection = this._composeCollectionName(asset.seller, org);
-            if (await this._assetExists(ctx, assetId, bidObjType, collection)) {
-                bids.push(await this._getAsset(ctx,assetId,bidObjType,collection));
-            }
-        }
-
-        if (bids.length === 0){
-            asset.status = LotStatus.Withdraw;
+        let bids = await this._getBidsForLot(ctx, lot);
+        if (bids.length === 0) {
+            lot.status = LotStatus.Withdrawn;
         } else {
-            bids.sort((bid1,bid2) => bid2.price - bid1.price);
-
+            bids.sort((bid1, bid2) => bid2.price - bid1.price);
+            
             const bestBid = bids[0];
-            asset.status = LotStatus.Sold;
-            asset.buyer = bestbid.bidder;
-            asset.hammerPrice = bestBid.price;
+            lot.status = LotStatus.Sold;
+            lot.buyer = bestBid.bidder;
+            lot.hammerPrice = bestBid.price;
         }
 
-        await this._putAsset(ctx, asset, assetObjType);
+        await this._putAsset(ctx, lotObjType, lot);
     }
 
-    async getBidsForLot(ctx, lot){
-        if(ctx.clientIdentity.getMSPID() !== lot.seller) {
-            throw new Error ('Not autorized.');
+    async listBids(ctx, lotID) {
+        const lot = await this._getAsset(ctx, lotObjType, lotID);
+        return await this._getBidsForLot(ctx, lot);
+    }
+
+    async _getBidsForLot(ctx, lot) {
+        if (lot.seller !== ctx.clientIdentity.getMSPID()) {
+            throw new Error(`only lot seller can list bids`);
         }
 
-        if (lot.status !== LotStatus.Sale) {
-            throw new Error ('Lot is not for Sale');
+        if (lot.status !== LotStatus.ForSale) {
+            throw new Error(`unable to list bids for a lot that is not offered for sale`);
         }
 
         let bids = [];
-
-        for(const org of participents) {
-            if(org === lot.seller) {
+        for (const org of auctionParticipants) {
+            if (org === lot.seller) {
                 continue;
             }
+
             const collection = this._composeCollectionName(lot.seller, org);
-            if(await this._assetExists(ctx,lot.id,bidObjType,collection)) {
-                bids.push(await this._getAsset(ctx,lot.id,bidObjType,collection));
+            if (await this._assetExists(ctx, bidObjType, lot.id, collection)) {
+                bids.push(await this._getAsset(ctx, bidObjType, lot.id, collection));
             }
         }
+
         return bids;
     }
 
-    async _composeCollectionName(org1, org2){
-        return [org1, org2].sort().join('-');
+    async listLotsForSale(ctx) {
+        return this._listLotsWithStatus(ctx, LotStatus.ForSale);
     }
 
-    async _assetExists(ctx, assetId, assetType, collection = '') {
-        const compKey = await ctx.stub.createCompositeKey(assetType,[assetId]);
-
-        let assetBytes;
-        if (collection === '') {
-            assetBytes = await ctx.stub.getState(compKey);
-        } else {
-            assetBytes = await ctx.stub.getPrivateData(collection,compKey);
-        }
-
-        return assetBytes && assetBytes > 0;
+    async listSoldLots(ctx) {
+        return this._listLotsWithStatus(ctx, LotStatus.Sold);
     }
 
-    async _getAsset(ctx, assetId, assetType, collection = '') {
-        const compKey = await ctx.stub.createCompositeKey(assetType,[assetId]);
-
-        let assetBytes;
-        if (collection === '') {
-            assetBytes = await ctx.stub.getState(compKey);
-        } else {
-            assetBytes = await ctx.stub.getPrivateData(collection,compKey);
-        }
-
-        if (!assetBytes || assetBytes.length === 0) {
-            throw new Error(`Asset ${assetId} does not exists.`);
-        }
-
-        return JSON.parse(assetBytes);
+    async listWithdrawnLots(ctx) {
+        return this._listLotsWithStatus(ctx, LotStatus.Withdrawn);
     }
 
-    async _putAsset(ctx, asset, assetType, collection='') {
-        const compKey = await ctx.stub.createCompositeKey(assetType,[asset.Id]);
-
-        if (collection === '') {
-            await ctx.stub.putState(compKey,Buffer.from(JSON.stringify(asset)));
-        } else {
-            await ctx.stub.putPrivateData(collection,compKey,Buffer.from(JSON.stringify(asset)));
-        }
-    }
-
-    async  _getAssetWithStatus(ctx, assetStatus) {
-        const assetIterator = await ctx.stub.getStateByPartialCompositeKey(assetObjType,[]);
-
-        let result = [];
-        for await(const res of assetIterator){
-            const jsonObj = JSON.parse(res.value.toString());
-            if(assetStatus === jsonObj.status) {
-                result.push(jsonObj);
+    async _listLotsWithStatus(ctx, status) {
+        const iteratorPromise = ctx.stub.getStateByPartialCompositeKey(lotObjType, []);
+        
+        let results = [];
+        for await (const res of iteratorPromise) {
+            const lot = JSON.parse(res.value.toString());
+            if (lot.status === status) {
+                results.push(lot);
             }
         }
-        return result;
+
+        return JSON.stringify(results);
     }
 
+    async _assetExists(ctx, assetObjType, id, collection='') {
+        const compositeKey = ctx.stub.createCompositeKey(assetObjType, [id]);
 
+        let assetBytes;
+        collection = collection || '';
+        if (collection === '') {
+            assetBytes = await ctx.stub.getState(compositeKey);
+        } else {
+            assetBytes = await ctx.stub.getPrivateData(collection, compositeKey);
+        }
+        
+        return assetBytes && assetBytes.length > 0;
+    }
+
+    async _getAsset(ctx, assetObjType, id, collection='') {
+        const compositeKey = ctx.stub.createCompositeKey(assetObjType, [id]);
+
+        let assetBytes;
+        collection = collection || '';
+        if (collection === '') {
+            assetBytes = await ctx.stub.getState(compositeKey);
+        } else {
+            assetBytes = await ctx.stub.getPrivateData(collection, compositeKey);
+        }
+        
+        if (!assetBytes || assetBytes.length === 0) {
+            throw new Error(`the asset ${assetObjType} with ID ${id} does not exist`);
+        }
+
+        return JSON.parse(assetBytes.toString());
+    }
+
+    async _putAsset(ctx, assetObjType, asset, collection='') {
+        const compositeKey = ctx.stub.createCompositeKey(assetObjType, [asset.id]);
+        
+        collection = collection || '';
+        if (collection === '') {
+            await ctx.stub.putState(compositeKey, Buffer.from(JSON.stringify(asset)));
+        } else {
+            await ctx.stub.putPrivateData(collection, compositeKey, Buffer.from(JSON.stringify(asset)));
+        }
+    }
+
+    _composeCollectionName(org1, org2) {
+        return [org1, org2].sort().join('-');
+    }
 }
+
+module.exports = BlindAuction;
