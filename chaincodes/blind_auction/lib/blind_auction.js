@@ -114,10 +114,32 @@ class AuctionContract extends Contract {
         await this._putAsset(ctx, asset, assetObjType);
     }
 
+    async getBidsForLot(ctx, lot){
+        if(ctx.clientIdentity.getMSPID() !== lot.seller) {
+            throw new Error ('Not autorized.');
+        }
+
+        if (lot.status !== LotStatus.Sale) {
+            throw new Error ('Lot is not for Sale');
+        }
+
+        let bids = [];
+
+        for(const org of participents) {
+            if(org === lot.seller) {
+                continue;
+            }
+            const collection = this._composeCollectionName(lot.seller, org);
+            if(await this._assetExists(ctx,lot.id,bidObjType,collection)) {
+                bids.push(await this._getAsset(ctx,lot.id,bidObjType,collection));
+            }
+        }
+        return bids;
+    }
+
     async _composeCollectionName(org1, org2){
         return [org1, org2].sort().join('-');
     }
-
 
     async _assetExists(ctx, assetId, assetType, collection = '') {
         const compKey = await ctx.stub.createCompositeKey(assetType,[assetId]);
