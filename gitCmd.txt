@@ -26,4 +26,5 @@ Push the changes in your local repository to GitHub if there is a remote branch 
 
  ------------------To Set new Git repo to new folder --------------------------------
  Navigate to new folder and set the new repository URL
- git remote set-url origin https://github.com/SumitVedpathak/<newRepo>.git
+ git remote set-url origin https://github.com/SumitVedpathak/<newRepo>.git 
+ 
